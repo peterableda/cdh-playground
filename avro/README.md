@@ -1,7 +1,12 @@
-Create test files
+# AVRO Schema evolution
+[Avro Schema Resolution](https://avro.apache.org/docs/1.7.7/spec.html#Schema+Resolution)
 
-Create 'quotes.json' file
+Avro exercise to demonstrate how schema evolution works through a simple example. 
 
+### Create data and schema files
+
+Create *quotes.json* file:
+```
 {"a":"Superman (Clark Kent)","b":"I'm here to fight for truth, and justice, and the American way."}
 {"a":"Kick-Ass (Dave Lizewski)","b":"Like every serial killer already knew: eventually fantasising just doesn't do it for you anymore."}
 {"a":"Captain America (Steve Rogers)","b":"I punched out Adolf Hitler 200 times."}
@@ -24,95 +29,100 @@ Create 'quotes.json' file
 {"a":"Blade","b":"Some motherf***ers are always trying to ice-skate uphill."}
 {"a":"Hellboy","b":"Didn't I kill you already?"}
 {"a":"Professor X (Charles Xavier)","b":"Wise man say forgiveness is divine, but never pay full price for late pizza."}
+```
 
-
-
-Create quotes.avsc file
-
+Create *quotes.avsc* file:
+```
 {
-"type" : "record",
-"name" : "quotes",
-"namespace" : "com.superhero",
-"fields" : [ {
-"name" : "a",
-"type" : "string",
-"doc" : "Name"
-}, {
-"name" : "b",
-"type" : "string",
-"doc" : "quote"
-}],
-"doc:" : "SuperHero quotes"
+  "type": "record",
+  "name": "quotes",
+  "namespace": "com.superhero",
+  "fields": [{
+    "name": "a",
+    "type": "string",
+    "doc": "Name"
+  }, {
+    "name": "b",
+    "type": "string",
+    "doc": "quote"
+  }],
+  "doc:": "SuperHero quotes"
 }
+```
 
+### Create Avro data file from the JSON and the Schema
+`avro-tools fromjson quotes.json --schema-file quotes.avsc > quotes.avro`
 
-Cretate AVRO file:
-avro-tools fromjson quotes.json --schema-file quotes.avsc > quotes.avro
+Validate the AVRO data file:
+`avro-tools tojson quotes.avro --pretty`
+`avro-tools getschema quotes.avro`
+`avro-tools getmeta quotes.avro`
 
-To validate AVRO file:
-avro-tools tojson quotes.avro --pretty
-avro-tools getschema quotes.avro
-avro-tools getmeta quotes.avro
+## Alter the original schema
+We decided that we need to track when did the SuperHero said what's said...
+We have two options to add the new column - create add it as optional or add it with a default value:
 
-
-After it this you decided that you would like to track when did the SuperHero said what's said...
-
-Create quotes_v2_op1.avsc file
-
+Add an optinal column to the schema (*quotes_v2_op1.avsc*):
+```
 {
-"type" : "record",
-"name" : "quotes",
-"namespace" : "com.superhero",
-"fields" : [ {
-"name" : "a",
-"type" : "string",
-"doc" : "Name"
-}, {
-"name" : "b",
-"type" : "string",
-"doc" : "quote"
-}, {
-"name" : "c",
-"type": ["null", "long"],
-"default": null,
-"doc" : "time"
-} ],
-"doc:" : "SuperHero quotes"
+  "type": "record",
+  "name": "quotes",
+  "namespace": "com.superhero",
+  "fields": [{
+    "name": "a",
+    "type": "string",
+    "doc": "Name"
+  }, {
+    "name": "b",
+    "type": "string",
+    "doc": "quote"
+  }, {
+    "name": "c",
+    "type": ["null", "long"],
+    "default": null,
+    "doc": "time"
+  }],
+  "doc:": "SuperHero quotes"
 }
+```
 
-Create quotes_v2_op2.avsc file
-
+Add an default value to the schema (*quotes_v2_op2.avsc*):
+```
 {
-"type" : "record",
-"name" : "quotes",
-"namespace" : "com.superhero",
-"fields" : [ {
-"name" : "a",
-"type" : "string",
-"doc" : "Name"
-}, {
-"name" : "b",
-"type" : "string",
-"doc" : "quote"
-}, {
-"name" : "c",
-"type": "long",
-"default": 1,
-"doc" : "time"
-} ],
-"doc:" : "SuperHero quotes"
+  "type": "record",
+  "name": "quotes",
+  "namespace": "com.superhero",
+  "fields": [{
+    "name": "a",
+    "type": "string",
+    "doc": "Name"
+  }, {
+    "name": "b",
+    "type": "string",
+    "doc": "quote"
+  }, {
+    "name": "c",
+    "type": "long",
+    "default": 1,
+    "doc": "time"
+  }],
+  "doc:": "SuperHero quotes"
 }
+```
 
+## Now let's test the schemas with Hive
 
-sudo -u hdfs hdfs dfs -mkdir -p /data/avro_test/schema
-sudo -u hdfs hdfs dfs -mkdir /data/avro_test/data/
-sudo -u hdfs hdfs dfs -put /root/quotes.avsc /root/quotes_v2_op1.avsc /root/quotes_v2_op2.avsc /data/avro_test/schema
-sudo -u hdfs hdfs dfs -put /root/quotes.avro /data/avro_test/data/
+First move everything to HDFS
+`sudo -u hdfs hdfs dfs -mkdir -p /data/avro_test/schema`
+`sudo -u hdfs hdfs dfs -mkdir /data/avro_test/data/`
+`sudo -u hdfs hdfs dfs -put /root/quotes.avsc /root/quotes_v2_op1.avsc /root/quotes_v2_op2.avsc /data/avro_test/schema`
+`sudo -u hdfs hdfs dfs -put /root/quotes.avro /data/avro_test/data/`
 
+Connect to Hive from shell
+`beeline -u jdbc:hive2://localhost:10000`
 
-beeline -u jdbc:hive2://localhost:10000
-
-
+Create the tables to read with the altered schemas from the Avro dataset:
+```
 CREATE TABLE quotes
 ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
 STORED as INPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat'
@@ -122,7 +132,7 @@ TBLPROPERTIES ('avro.schema.url'='hdfs:///data/avro_test/schema/quotes_v2_op1.av
 LOAD DATA
 INPATH '/data/avro_test/data/'
 INTO TABLE quotes;
-
+```
 
 
 
