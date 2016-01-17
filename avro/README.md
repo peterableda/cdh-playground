@@ -54,9 +54,11 @@ Create *quotes.avsc* file:
 `avro-tools fromjson quotes.json --schema-file quotes.avsc > quotes.avro`
 
 Validate the AVRO data file:
-`avro-tools tojson quotes.avro --pretty`
-`avro-tools getschema quotes.avro`
-`avro-tools getmeta quotes.avro`
+```
+avro-tools tojson quotes.avro --pretty
+avro-tools getschema quotes.avro
+avro-tools getmeta quotes.avro
+```
 
 ## Alter the original schema
 We decided that we need to track when did the SuperHero said what's said...
@@ -113,10 +115,12 @@ Add an default value to the schema (*quotes_v2_op2.avsc*):
 ## Now let's test the schemas with Hive
 
 First move everything to HDFS
-`sudo -u hdfs hdfs dfs -mkdir -p /data/avro_test/schema`
-`sudo -u hdfs hdfs dfs -mkdir /data/avro_test/data/`
-`sudo -u hdfs hdfs dfs -put /root/quotes.avsc /root/quotes_v2_op1.avsc /root/quotes_v2_op2.avsc /data/avro_test/schema`
-`sudo -u hdfs hdfs dfs -put /root/quotes.avro /data/avro_test/data/`
+```
+sudo -u hdfs hdfs dfs -mkdir -p /data/avro_test/schema
+sudo -u hdfs hdfs dfs -mkdir /data/avro_test/data/
+sudo -u hdfs hdfs dfs -put /root/quotes.avsc /root/quotes_v2_op1.avsc /root/quotes_v2_op2.avsc /data/avro_test/schema
+sudo -u hdfs hdfs dfs -put /root/quotes.avro /data/avro_test/data/
+```
 
 Connect to Hive from shell
 `beeline -u jdbc:hive2://localhost:10000`
